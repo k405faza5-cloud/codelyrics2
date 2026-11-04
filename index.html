@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeLyrics - Auto Coding Song Lyrics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Recording Indicator Badge -->
+    <div class="rec-badge" id="recBadge">
+      <span class="rec-dot"></span>
+      <span>REC</span>
+      <span id="recTimer">00:00</span>
+    </div>
+
+    <!-- Main Portrait Immersive Code Stage (9:16 Aspect Ratio) -->
+    <main class="code-viewport tilt-active" id="codeViewport">
+      <!-- Background Visual Effects (Flower Mandala, Ambient Bokeh) -->
+      <canvas id="bgCanvas" class="background-canvas"></canvas>
+
+      <!-- Vertical Anamorphic Orange Lens Flare -->
+      <div class="lens-flare-vertical" id="lensFlare"></div>
+
+      <!-- Ghost Blurred Code Reflection in Background -->
+      <div class="bg-code-reflection" id="bgCodeReflection"></div>
+
+      <!-- Main Code Editor Surface (Tracks cursor actively) -->
+      <div class="editor-surface">
+        <div class="code-container" id="codeContainer">
+          <!-- Dynamically typed code lines with camera follow -->
+        </div>
+      </div>
+
+      <!-- CRT Scanline & Subtle Vignette -->
+      <div class="screen-scanlines" id="screenScanlines"></div>
+      <div class="screen-vignette"></div>
+    </main>
+
+    <!-- Sleek Floating Control Bar (Fades out when inactive during playback) -->
+    <div class="floating-controls-bar" id="controlsBar">
+      <!-- Song Selector & Upload -->
+      <div class="ctrl-group">
+        <select id="songSelect" class="song-select" title="Pilih Lagu">
+          <!-- Populated from SONG_PRESETS -->
+        </select>
+        <label for="audioFileInput" class="btn btn-sm" title="Upload file audio MP3/WAV sendiri">
+          <span>📁</span> Upload Lagu
+        </label>
+        <input type="file" id="audioFileInput" accept="audio/*" style="display: none;">
+      </div>
+
+      <div class="ctrl-divider"></div>
+
+      <!-- Playback Controls -->
+      <div class="ctrl-group playback-group">
+        <button id="btnPlayPause" class="btn btn-primary btn-round" title="Play / Pause (Spasi)">
+          <span id="playIcon">▶</span>
+        </button>
+        <button id="btnReplay" class="btn btn-icon btn-sm" title="Ulang dari awal (Shortcut: Tombol 0)">
+          <span>↺</span>
+        </button>
+        <div class="time-display" id="timeDisplay">00:00 / 00:25</div>
+        <div class="slider-wrap">
+          <input type="range" id="progressSlider" class="progress-slider" min="0" max="25" step="0.05" value="0">
+        </div>
+        <button id="btnLoop" class="btn btn-icon btn-sm" title="Ulangi otomatis (Loop)">
+          <span id="loopStatus" style="color: #ff2a55;">🔁</span>
+        </button>
+      </div>
+
+      <div class="ctrl-divider"></div>
+
+      <!-- Auto Record & Settings -->
+      <div class="ctrl-group">
+        <button id="btnAutoRecord" class="btn btn-sm btn-auto-rec" title="Auto rekam dari awal sampai selesai (Shortcut: Tombol R)">
+          <span>⏺️</span> Auto Rekam <kbd class="kbd-hint">R</kbd>
+        </button>
+        <button id="btnOpenHashtags" class="btn btn-sm" style="color: #ff3366; border-color: rgba(255, 42, 85, 0.4); background: rgba(255, 42, 85, 0.1);" title="Rekomendasi Hashtag & Caption FYP">
+          <span>🚀</span> Hashtag FYP
+        </button>
+        <button id="btnToggleDrawer" class="btn btn-sm" title="Buka Pengaturan Lirik & Efek">
+          <span>✍️</span> Edit Lirik & Potong
+        </button>
+        <button id="btnFullscreen" class="btn btn-icon btn-sm" title="Layar Penuh (Shortcut: Tombol F)">
+          <span>⛶</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Slide-Out Settings & Lyrics Drawer -->
+    <aside class="side-drawer collapsed" id="sideDrawer">
+      <div class="drawer-header">
+        <div class="drawer-title">
+          <span>✍️</span> Lirik, Potong Lagu & Kalibrasi
+        </div>
+        <button id="btnCloseDrawer" class="btn btn-icon">✕</button>
+      </div>
+
+      <div class="drawer-tabs">
+        <button class="tab-btn active" data-tab="generator">⚡ Buat Kodingan</button>
+        <button class="tab-btn" data-tab="trimmer">✂️ Potong FYP</button>
+        <button class="tab-btn" data-tab="editor">⏱️ Edit Waktu</button>
+        <button class="tab-btn" data-tab="styles">🎨 Gaya & Delay</button>
+      </div>
+
+      <div class="drawer-body">
+        <!-- TAB 1: AUTO GENERATOR -->
+        <div class="tab-content" id="tabGenerator">
+          <div class="form-group">
+            <label class="form-label">
+              Paste Lirik Lagu (Bebas / Lirik Asli):
+              <span class="sub">Bahasa Indonesia / Inggris</span>
+            </label>
+            <textarea id="rawLyricsInput" class="form-control" rows="7" placeholder="Masukkan lirik lagu di sini, contoh:
+He loves me not
+He loves me
+He holds me tight then lets me go
+You gotta say that you're sorry
+Wake up in the morning
+Everything is alright
+I don't need to worry
+and oh...
+its hard to see you"></textarea>
+          </div>
+
+          <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+            <button id="btnConvertLyrics" class="btn btn-primary" style="flex: 1;">
+              ⚡ Auto Convert ke Kodingan!
+            </button>
+            <button id="btnStartTapSync" class="btn" title="Sync ritme lagu menggunakan spasi">
+              ⏱️ Tap-to-Sync
+            </button>
+          </div>
+
+          <div class="form-group" style="margin-top: 1rem;">
+            <label class="form-label">
+              Hasil Kodingan Tergenerate:
+              <span class="sub">Preview otomatis</span>
+            </label>
+            <textarea id="generatedCodePreview" class="form-control" rows="7" readonly style="color: #61afef;"></textarea>
+          </div>
+
+          <button id="btnApplyGenerated" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
+            ✅ Jalankan Kodingan Ini di Layar!
+          </button>
+        </div>
+
+        <!-- TAB 2: SMART AUDIO TRIMMER (FYP HOOK FINDER) -->
+        <div class="tab-content" id="tabTrimmer" style="display: none;">
+          <div class="form-group" style="background: rgba(255, 42, 85, 0.08); border: 1px solid rgba(255, 42, 85, 0.25); border-radius: 10px; padding: 0.85rem;">
+            <div style="font-size: 0.85rem; font-weight: 700; color: #fff; margin-bottom: 4px;">
+              ✂️ Pemotong Otomatis Bagian Viral (FYP)
+            </div>
+            <p style="font-size: 0.75rem; color: #94a3b8; line-height: 1.4;">
+              Potong bagian lagu yang paling enak / viral (Reff / Drop / Hook) berdurasi 15s - 30s agar video pas di Reels & TikTok!
+            </p>
+          </div>
+
+          <div class="form-group" style="margin-top: 0.75rem;">
+            <button id="btnAutoChorus" class="btn btn-primary" style="width: 100%; padding: 0.65rem; font-size: 0.825rem; box-shadow: 0 0 15px rgba(255, 42, 85, 0.4);">
+              ⚡ Auto Deteksi Bagian Reff / Viral Drop!
+            </button>
+          </div>
+
+          <div class="form-group" style="margin-top: 0.5rem;">
+            <label class="form-label">Pilihan Durasi Viral Instan:</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+              <button class="btn btn-sm btn-trim-preset" data-dur="15">⏱️ 15s (TikTok Fast)</button>
+              <button class="btn btn-sm btn-trim-preset" data-dur="20">⏱️ 20s (Sweet Spot)</button>
+              <button class="btn btn-sm btn-trim-preset" data-dur="25">⏱️ 25s (Standard)</button>
+              <button class="btn btn-sm btn-trim-preset" data-dur="30">⏱️ 30s (Full Hook)</button>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 0.75rem;">
+            <label class="form-label">
+              Rentang Potongan Lagu:
+              <span class="sub" id="trimDurLabel" style="color: #ff3366; font-weight: 700;">Durasi: 25.0s</span>
+            </label>
+            <div style="display: flex; gap: 0.6rem; align-items: center;">
+              <div style="flex: 1;">
+                <span style="font-size: 0.725rem; color: #94a3b8;">Mulai (detik):</span>
+                <input type="number" id="trimStartInput" class="form-control" style="width: 100%; font-size: 0.8rem;" min="0" step="0.5" value="0">
+              </div>
+              <div style="color: #64748b; font-size: 1.2rem; padding-top: 14px;">➔</div>
+              <div style="flex: 1;">
+                <span style="font-size: 0.725rem; color: #94a3b8;">Selesai (detik):</span>
+                <input type="number" id="trimEndInput" class="form-control" style="width: 100%; font-size: 0.8rem;" min="1" step="0.5" value="25">
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 0.5rem; margin-top: 0.85rem;">
+            <button id="btnPreviewTrim" class="btn" style="flex: 1;">
+              ▶ Tes Potongan
+            </button>
+            <button id="btnApplyTrim" class="btn btn-primary" style="flex: 1;">
+              ✅ Terapkan Potongan!
+            </button>
+          </div>
+        </div>
+
+        <!-- TAB 3: TIMING & LINE EDITOR -->
+        <div class="tab-content" id="tabEditor" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <label class="form-label">Daftar Baris & Timestamp:</label>
+            <button id="btnAddLine" class="btn btn-sm">+ Tambah Baris</button>
+          </div>
+          
+          <div id="linesEditorList" style="display: flex; flex-direction: column; gap: 0.6rem; max-height: 480px; overflow-y: auto;">
+            <!-- Dynamic line items -->
+          </div>
+        </div>
+
+        <!-- TAB 4: AESTHETICS & ZERO-DELAY SYNC -->
+        <div class="tab-content" id="tabStyles" style="display: none;">
+          <!-- ZERO DELAY SYNC CALIBRATION -->
+          <div class="form-group" style="background: rgba(0, 229, 255, 0.05); border: 1px solid rgba(0, 229, 255, 0.25); border-radius: 10px; padding: 0.85rem; margin-bottom: 0.75rem;">
+            <label class="form-label" style="color: #00e5ff; font-weight: 700;">
+              ⚡ Kalibrasi Sinkronisasi Audio & Lirik:
+              <span class="sub" id="delayValueLabel" style="color: #00e5ff; font-weight: 700;">+90 ms (Pas / Zero Delay)</span>
+            </label>
+            <p style="font-size: 0.725rem; color: #94a3b8; margin-bottom: 0.6rem; line-height: 1.4;">
+              Atur waktu keluarnya teks agar 100% pas dengan serangan suara vokal tanpa telat/delay.
+            </p>
+            <input type="range" id="syncOffsetSlider" min="-100" max="250" step="10" value="90" style="width: 100%; cursor: pointer;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: #64748b; margin-top: 3px;">
+              <span>-100ms (Teks Lebih Lambat)</span>
+              <span>0ms</span>
+              <span>+250ms (Teks Lebih Cepat)</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Warna Kursor Kodingan:</label>
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn cursor-color-btn" data-color="#ff1e42" style="background: #ff1e42; color: #fff;">Merah (Asli)</button>
+              <button class="btn cursor-color-btn" data-color="#00e5ff" style="background: #00e5ff; color: #000;">Cyan</button>
+              <button class="btn cursor-color-btn" data-color="#f59e0b" style="background: #f59e0b; color: #000;">Gold</button>
+              <button class="btn cursor-color-btn" data-color="#a855f7" style="background: #a855f7; color: #fff;">Purple</button>
+            </div>
+          </div>
+
+          <hr style="border: none; border-top: 1px solid var(--border-color); margin: 0.5rem 0;">
+
+          <div class="toggle-row">
+            <span class="toggle-label">Bunga Wireframe Emas (Mandala)</span>
+            <label class="switch">
+              <input type="checkbox" id="toggleFlower" checked>
+              <span class="slider-toggle"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <span class="toggle-label">Vertical Lens Flare (Pantulan Cahaya Oranye)</span>
+            <label class="switch">
+              <input type="checkbox" id="toggleLensFlare" checked>
+              <span class="slider-toggle"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <span class="toggle-label">Refleksi Kodingan Buram di Belakang</span>
+            <label class="switch">
+              <input type="checkbox" id="toggleBgCode" checked>
+              <span class="slider-toggle"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <span class="toggle-label">Efek Partikel Debu Menyala (Bokeh)</span>
+            <label class="switch">
+              <input type="checkbox" id="toggleParticles" checked>
+              <span class="slider-toggle"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <span class="toggle-label">CRT Scanlines & Retro Tone</span>
+            <label class="switch">
+              <input type="checkbox" id="toggleScanlines" checked>
+              <span class="slider-toggle"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <span class="toggle-label">Kemiringan Layar 3D (Cinematic Tilt)</span>
+            <label class="switch">
+              <input type="checkbox" id="toggleTiltSwitch" checked>
+              <span class="slider-toggle"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Modal: Tap-to-Sync Assistant -->
+    <div class="modal-overlay" id="tapSyncModal">
+      <div class="modal-card" style="max-width: 520px; text-align: center;">
+        <div class="modal-header">
+          <div class="modal-title">⏱️ Tap-to-Sync Ritme Lagu</div>
+          <button id="btnCloseTapSync" class="btn btn-icon">✕</button>
+        </div>
+        <div class="modal-body" style="padding: 1.5rem 0;">
+          <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 1.25rem;">
+            Lagu sedang diputar. Tekan tombol <strong>[SPACEBAR]</strong> pada keyboard setiap kali lirik dinyanyikan untuk mencatat ketukan pas secara otomatis!
+          </p>
+
+          <div id="tapCurrentLineBox" style="background: rgba(255, 42, 85, 0.1); border: 1px solid rgba(255, 42, 85, 0.4); border-radius: 8px; padding: 1.25rem; font-family: var(--font-mono); font-size: 1.1rem; color: #fff; margin-bottom: 1.5rem; min-height: 70px; display: flex; align-items: center; justify-content: center;">
+            Tekan "Mulai Sync" untuk mulai
+          </div>
+
+          <button id="btnTapAction" class="btn btn-primary" style="padding: 0.85rem 2rem; font-size: 1.05rem; font-weight: 700; border-radius: 30px; box-shadow: 0 0 25px rgba(255, 42, 85, 0.6);">
+            👉 KETUK DI SINI / SPASI
+          </button>
+
+          <div id="tapProgressText" style="margin-top: 1rem; font-size: 0.8rem; color: #64748b;">
+            Baris: 0 / 0
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Modal: Hashtags & Caption FYP Booster -->
+    <div class="modal-overlay" id="hashtagsModal">
+      <div class="modal-card" style="max-width: 580px;">
+        <div class="modal-header">
+          <div class="modal-title" style="display: flex; align-items: center; gap: 0.5rem;">
+            <span>🚀</span> Rekomendasi Hashtag & Caption FYP
+          </div>
+          <button id="btnCloseHashtags" class="btn btn-icon">✕</button>
+        </div>
+        <div class="modal-body" style="display: flex; flex-direction: column; gap: 1rem;">
+          <p style="font-size: 0.825rem; color: #94a3b8; line-height: 1.45;">
+            Salin paket caption & hashtag viral di bawah ini saat mengunggah video ke <strong>TikTok</strong> atau <strong>Instagram Reels</strong> untuk memicu algoritma FYP:
+          </p>
+
+          <!-- Paket 1 -->
+          <div style="background: rgba(255, 42, 85, 0.06); border: 1px solid rgba(255, 42, 85, 0.25); border-radius: 10px; padding: 0.85rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+              <span style="font-size: 0.825rem; font-weight: 700; color: #ff3366;">🔥 Paket 1: Viral Coding Tren (Paling Populer)</span>
+              <button class="btn btn-primary btn-sm btn-copy-fpy" data-target="caption1">📋 Salin</button>
+            </div>
+            <textarea id="caption1" class="form-control" rows="3" readonly style="font-size: 0.775rem; color: #cbd5e1; resize: none;">Gak nyangka lagu ini kalau dijadiin kodingan jadi estetik banget 💻✨ #coding #programming #musicedit #codinglyrics #devtok #programmer #aesthetic #laguviral #liriklagu #fyp #fypシ #foryou #foryoupage #viral</textarea>
+          </div>
+
+          <!-- Paket 2 -->
+          <div style="background: rgba(168, 85, 247, 0.06); border: 1px solid rgba(168, 85, 247, 0.25); border-radius: 10px; padding: 0.85rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+              <span style="font-size: 0.825rem; font-weight: 700; color: #c084fc;">🥀 Paket 2: Galau & Overthinking (Tinggi Share)</span>
+              <button class="btn btn-primary btn-sm btn-copy-fpy" data-target="caption2" style="background: linear-gradient(135deg, #a855f7, #7c3aed); border-color: #a855f7;">📋 Salin</button>
+            </div>
+            <textarea id="caption2" class="form-control" rows="3" readonly style="font-size: 0.775rem; color: #cbd5e1; resize: none;">Codingan ini relate banget sama perasaanku sekarang... 🥀🖤 #liriklagu #laguviral #galau #overthinking #codinglyrics #sadvibes #trenlagu #laguviraltiktok #fyp #fypシ #foryou</textarea>
+          </div>
+
+          <!-- Paket 3 -->
+          <div style="background: rgba(0, 229, 255, 0.06); border: 1px solid rgba(0, 229, 255, 0.25); border-radius: 10px; padding: 0.85rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+              <span style="font-size: 0.825rem; font-weight: 700; color: #22d3ee;">🌐 Paket 3: Developer Global (Jangkauan Luar Negeri)</span>
+              <button class="btn btn-primary btn-sm btn-copy-fpy" data-target="caption3" style="background: linear-gradient(135deg, #06b6d4, #0891b2); border-color: #06b6d4;">📋 Salin</button>
+            </div>
+            <textarea id="caption3" class="form-control" rows="3" readonly style="font-size: 0.775rem; color: #cbd5e1; resize: none;">When music meets code 🎧💻 #coding #developer #programmer #webdev #vscode #tech #codinglife #music #reels #explore #viral #fyp #foryou</textarea>
+          </div>
+
+          <!-- Tips Rahasia FYP -->
+          <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: 10px; padding: 0.85rem; font-size: 0.75rem; color: #94a3b8; line-height: 1.5;">
+            <strong style="color: #f1f5f9; display: block; margin-bottom: 4px;">💡 3 Kunci Rahasia Tembus FYP:</strong>
+            1. ⏰ <strong>Jam Upload Terbaik</strong>: Siang (12.00 - 13.00) dan Malam (19.00 - 21.30 WIB).<br>
+            2. 🎵 <strong>Gunakan Sound Tren</strong>: Di TikTok, pilih "Tambahkan Suara" dengan lagu yang sama, lalu atur volume musik TikTok ke 3% agar algoritma menganggap Anda menggunakan sound resmi yang sedang naik daun.<br>
+            3. 💬 <strong>Pancing Komentar</strong>: Tanya judul lagu atau tanya arti kodingannya di caption.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/audio-preset.js"></script>
+  <script src="js/presets.js"></script>
+  <script src="js/syntax-highlighter.js"></script>
+  <script src="js/visuals.js"></script>
+  <script src="js/typing-engine.js"></script>
+  <script src="js/code-generator.js"></script>
+  <script src="js/tap-sync.js"></script>
+  <script src="js/recorder.js"></script>
+  <script src="js/audio-player.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
